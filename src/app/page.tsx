@@ -1,103 +1,158 @@
-import Image from "next/image";
+"use client"; // Indica que este archivo es un componente cliente, necesario para usar hooks como useState.
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { useState, useRef } from "react"; // Eliminé useEffect ya que no se utiliza.
+import { Button } from "@/components/ui/button"; // Importa el componente Button desde la biblioteca ShadCN.
+import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+export default function RecordingPage() {
+	const [isRecording, setIsRecording] = useState(false); // Estado para controlar si se está grabando o no.
+	const [audioURLs, setAudioURLs] = useState<{ url: string; name: string }[]>(
+		[]
+	); // Definí el tipo como un array de objetos con url y name.
+	const [shouldRecord, setShouldRecord] = useState(true); // Estado para controlar si se debe grabar o no.
+	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
+	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
+	const audioContextRef = useRef<AudioContext | null>(null); // Inicialicé como null y definí el tipo AudioContext.
+	const analyserRef = useRef<AnalyserNode | null>(null); // Inicialicé como null y definí el tipo AnalyserNode.
+	const dataArrayRef = useRef<Uint8Array | null>(null); // Inicialicé como null y definí el tipo Uint8Array.
+	const animationFrameRef = useRef<number | null>(null); // Inicialicé como null y definí el tipo number.
+
+	const startRecording = () => {
+		if (!shouldRecord) return; // No inicia la grabación si la opción está desactivada.
+
+		navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+			const mediaRecorder = new MediaRecorder(stream); // Inicializa MediaRecorder con el flujo de audio.
+			mediaRecorderRef.current = mediaRecorder;
+			audioChunksRef.current = []; // Resetea los fragmentos de audio.
+
+			const audioContext = new AudioContext(); // Usé AudioContext directamente.
+			const analyser = audioContext.createAnalyser(); // Crea un analizador de audio.
+			const source = audioContext.createMediaStreamSource(stream); // Conecta el micrófono al contexto de audio.
+			source.connect(analyser); // Conecta el analizador al flujo de audio.
+
+			analyser.fftSize = 256; // Configura el tamaño de la transformada rápida de Fourier.
+			const bufferLength = analyser.frequencyBinCount; // Obtiene el tamaño del buffer de frecuencias.
+			const dataArray = new Uint8Array(bufferLength); // Crea un array para almacenar los datos de frecuencia.
+
+			audioContextRef.current = audioContext; // Guarda el contexto de audio en la referencia.
+			analyserRef.current = analyser; // Guarda el analizador en la referencia.
+			dataArrayRef.current = dataArray; // Guarda el array de datos en la referencia.
+
+			const draw = () => {
+				analyser.getByteFrequencyData(dataArray); // Obtiene los datos de frecuencia del analizador.
+				const level = dataArray.reduce((a, b) => a + b, 0) / bufferLength; // Calcula el nivel promedio de audio.
+				const levelElement = document.getElementById("audio-level"); // Obtiene el elemento del visor de nivel de audio.
+				if (levelElement) {
+					levelElement.style.width = `${level}%`; // Actualiza el ancho del visor según el nivel de audio.
+				}
+				animationFrameRef.current = requestAnimationFrame(draw); // Solicita la próxima animación.
+			};
+			draw(); // Inicia la animación.
+
+			mediaRecorder.ondataavailable = (event) => {
+				audioChunksRef.current.push(event.data); // Almacena cada fragmento de audio grabado.
+			};
+
+			mediaRecorder.onstop = () => {
+				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" }); // Crea un Blob con los fragmentos grabados.
+				const audioURL = URL.createObjectURL(audioBlob); // Genera una URL para el Blob.
+
+				const now = new Date();
+				const timestamp = now
+					.toLocaleString("es-ES", {
+						year: "numeric",
+						month: "2-digit",
+						day: "2-digit",
+						hour: "2-digit",
+						minute: "2-digit",
+						second: "2-digit",
+					})
+					.replace(/[:/]/g, "-"); // Formatea la fecha y hora para usarla como nombre.
+
+				const audioElement = new Audio(audioURL);
+				audioElement.addEventListener("loadedmetadata", () => {
+					const saveAudio = window.confirm(
+						`¿Quieres guardar este audio con el nombre: ${timestamp}?`
+					);
+					if (saveAudio) {
+						setAudioURLs((prev) => [...prev, { url: audioURL, name: timestamp }]);
+					}
+				});
+
+				audioContext.close(); // Cierra el contexto de audio al detener la grabación.
+				cancelAnimationFrame(animationFrameRef.current); // Cancela la animación del visor de nivel de audio.
+			};
+
+			mediaRecorder.start(); // Inicia la grabación.
+			setIsRecording(true); // Cambia el estado a "grabando".
+		});
+	};
+
+	const stopRecording = () => {
+		if (mediaRecorderRef.current) {
+			mediaRecorderRef.current.stop(); // Detiene la grabación.
+			setIsRecording(false); // Cambia el estado a "no grabando".
+		}
+	};
+
+	return (
+		<div className="p-6">
+			{" "}
+			{/* Contenedor principal con padding */}
+			<h1 className="text-2xl font-bold mb-4">Grabación de Tutoría</h1>{" "}
+			{/* Título principal */}
+			<p className="mb-4">Presiona el botón para grabar tu reunión.</p>{" "}
+			{/* Descripción */}
+			<div className="mb-4 flex items-center">
+				{" "}
+				{/* Contenedor del switch */}
+				<label htmlFor="record-toggle" className="mr-2">
+					¿Grabar audio?
+				</label>
+				<Switch
+					id="record-toggle"
+					checked={shouldRecord}
+					onCheckedChange={(value) => setShouldRecord(value)}
+				/>
+			</div>
+			<Button onClick={isRecording ? stopRecording : startRecording}>
+				{" "}
+				{/* Botón para iniciar o detener la grabación */}
+				{isRecording ? "Detener Grabación" : "Iniciar Grabación"}{" "}
+				{/* Texto dinámico del botón */}
+			</Button>
+			<div className="mt-4">
+				{" "}
+				{/* Contenedor del visor de nivel de audio */}
+				<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+					{" "}
+					{/* Barra de fondo del visor */}
+					<div
+						id="audio-level"
+						className="h-full bg-green-500"
+						style={{ width: "0%" }}
+					></div>{" "}
+					{/* Barra dinámica que muestra el nivel de audio */}
+				</div>
+			</div>
+			{audioURLs.length > 0 && (
+				<div className="mt-4">
+					{" "}
+					{/* Contenedor de la lista de audios guardados */}
+					<h2 className="text-xl font-semibold">Audios Guardados</h2>{" "}
+					{/* Subtítulo */}
+					<ul>
+						{audioURLs.map((audio, index) => (
+							<li key={index} className="mt-2">
+								<p className="text-sm">{audio.name}</p>{" "}
+								{/* Muestra el nombre del audio */}
+								<audio controls src={audio.url}></audio>{" "}
+								{/* Reproductor de audio para cada URL */}
+							</li>
+						))}
+					</ul>
+				</div>
+			)}
+		</div>
+	);
 }
