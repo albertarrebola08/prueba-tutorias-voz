@@ -3,13 +3,16 @@
 import { useState, useRef } from "react"; // Eliminé useEffect ya que no se utiliza.
 import { Button } from "@/components/ui/button"; // Importa el componente Button desde la biblioteca ShadCN.
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
+import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
+import { generateSummary } from "@/lib/chatgptApi"; // Importa la función para generar resúmenes.
 
 export default function RecordingPage() {
 	const [isRecording, setIsRecording] = useState(false); // Estado para controlar si se está grabando o no.
-	const [audioURLs, setAudioURLs] = useState<{ url: string; name: string }[]>(
-		[]
-	); // Definí el tipo como un array de objetos con url y name.
+	const [audioURLs, setAudioURLs] = useState<
+		{ url: string; name: string; transcription: string | null }[]
+	>([]); // Definí el tipo como un array de objetos con url, name y transcription.
 	const [shouldRecord, setShouldRecord] = useState(true); // Estado para controlar si se debe grabar o no.
+	const [sessionSummary, setSessionSummary] = useState<string | null>(null); // Estado para almacenar el resumen de la sesión.
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
 	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
 	const audioContextRef = useRef<AudioContext | null>(null); // Inicialicé como null y definí el tipo AudioContext.
@@ -54,8 +57,8 @@ export default function RecordingPage() {
 			};
 
 			mediaRecorder.onstop = () => {
-				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" }); // Crea un Blob con los fragmentos grabados.
-				const audioURL = URL.createObjectURL(audioBlob); // Genera una URL para el Blob.
+				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+				const audioURL = URL.createObjectURL(audioBlob);
 
 				const now = new Date();
 				const timestamp = now
@@ -67,20 +70,26 @@ export default function RecordingPage() {
 						minute: "2-digit",
 						second: "2-digit",
 					})
-					.replace(/[:/]/g, "-"); // Formatea la fecha y hora para usarla como nombre.
+					.replace(/[:/]/g, "-");
 
-				const audioElement = new Audio(audioURL);
-				audioElement.addEventListener("loadedmetadata", () => {
-					const saveAudio = window.confirm(
-						`¿Quieres guardar este audio con el nombre: ${timestamp}?`
-					);
-					if (saveAudio) {
-						setAudioURLs((prev) => [...prev, { url: audioURL, name: timestamp }]);
-					}
-				});
+				const saveAudio = window.confirm(
+					`¿Quieres guardar este audio con el nombre: ${timestamp}?`
+				);
+				if (saveAudio) {
+					const audioData = { url: audioURL, name: timestamp, transcription: null };
+					setAudioURLs((prev) => [...prev, audioData]);
 
-				audioContext.close(); // Cierra el contexto de audio al detener la grabación.
-				cancelAnimationFrame(animationFrameRef.current); // Cancela la animación del visor de nivel de audio.
+					handleTranscription(audioBlob).then((transcription) => {
+						setAudioURLs((prev) =>
+							prev.map((audio) =>
+								audio.url === audioURL ? { ...audio, transcription } : audio
+							)
+						);
+					});
+				}
+
+				audioContext.close();
+				cancelAnimationFrame(animationFrameRef.current);
 			};
 
 			mediaRecorder.start(); // Inicia la grabación.
@@ -92,6 +101,46 @@ export default function RecordingPage() {
 		if (mediaRecorderRef.current) {
 			mediaRecorderRef.current.stop(); // Detiene la grabación.
 			setIsRecording(false); // Cambia el estado a "no grabando".
+		}
+	};
+
+	const handleTranscription = async (audioBlob: Blob) => {
+		const audioFile = new File([audioBlob], "audio.webm", { type: "audio/webm" }); // Convierte el Blob en un archivo.
+		try {
+			const transcription = await transcribeAudio(audioFile); // Llama a la API de Whisper.
+			return transcription; // Devuelve la transcripción.
+		} catch (error) {
+			alert("Error al transcribir el audio. Por favor, inténtalo de nuevo.");
+			return null; // Devuelve null en caso de error.
+		}
+	};
+
+	const handleGenerateSummary = async () => {
+		try {
+			const transcriptions = await Promise.all(
+				audioURLs.map(async (audio) => {
+					const response = await fetch(audio.url);
+					const audioBlob = await response.blob();
+					const audioFile = new File([audioBlob], "audio.webm", {
+						type: "audio/webm",
+					});
+					return await transcribeAudio(audioFile);
+				})
+			);
+
+			if (transcriptions.length === 0) {
+				setSessionSummary(
+					"No se proporcionaron transcripciones para generar un resumen."
+				);
+				return;
+			}
+
+			const summary = await generateSummary(transcriptions); // Llama a la API de ChatGPT.
+			setSessionSummary(summary); // Almacena el resumen en el estado.
+		} catch (error) {
+			setSessionSummary(
+				"Error al generar el resumen. Por favor, inténtalo de nuevo."
+			);
 		}
 	};
 
@@ -148,9 +197,22 @@ export default function RecordingPage() {
 								{/* Muestra el nombre del audio */}
 								<audio controls src={audio.url}></audio>{" "}
 								{/* Reproductor de audio para cada URL */}
+								<p className="text-sm mt-2">
+									Transcripción: {audio.transcription || "Transcripción no disponible"}
+								</p>{" "}
+								{/* Muestra la transcripción del audio */}
 							</li>
 						))}
 					</ul>
+					<Button onClick={handleGenerateSummary} className="mt-4">
+						Generar Resumen de la Sesión
+					</Button>
+					{sessionSummary && (
+						<div className="mt-4 p-4 bg-gray-100 rounded">
+							<h3 className="text-lg font-semibold">Resumen de la Sesión</h3>
+							<p>{sessionSummary}</p>
+						</div>
+					)}
 				</div>
 			)}
 		</div>
