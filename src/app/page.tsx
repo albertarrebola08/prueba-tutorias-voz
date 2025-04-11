@@ -2,18 +2,20 @@
 
 import { useState, useRef } from "react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button"; // Importa el componente Button desde la biblioteca ShadCN.
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
 import { generateSummary } from "@/lib/chatgptApi"; // Importa la función para generar resúmenes.
+import { Mic, MicOff, FileText, Save } from "lucide-react"; // Añadimos el icono Save
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function RecordingPage() {
 	const [isRecording, setIsRecording] = useState(false); // Estado para controlar si se está grabando o no.
@@ -24,7 +26,7 @@ export default function RecordingPage() {
 	const [sessionSummary, setSessionSummary] = useState<string | null>(null); // Estado para almacenar el resumen de la sesión.
 	const [errorDialog, setErrorDialog] = useState({
 		isOpen: false,
-		message: ""
+		message: "",
 	}); // Estado para controlar el diálogo de error.
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
 	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
@@ -36,7 +38,8 @@ export default function RecordingPage() {
 	const startRecording = () => {
 		if (!shouldRecord) return;
 
-		navigator.mediaDevices.getUserMedia({ audio: true })
+		navigator.mediaDevices
+			.getUserMedia({ audio: true })
 			.then((stream) => {
 				const mediaRecorder = new MediaRecorder(stream); // Inicializa MediaRecorder con el flujo de audio.
 				mediaRecorderRef.current = mediaRecorder;
@@ -111,18 +114,24 @@ export default function RecordingPage() {
 			})
 			.catch((error) => {
 				let mensaje = "Error al acceder al micrófono: ";
-				
-				if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+
+				if (
+					error.name === "NotFoundError" ||
+					error.name === "DevicesNotFoundError"
+				) {
 					mensaje += "No se encontró ningún micrófono conectado.";
-				} else if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+				} else if (
+					error.name === "NotAllowedError" ||
+					error.name === "PermissionDeniedError"
+				) {
 					mensaje += "Permiso denegado para acceder al micrófono.";
 				} else {
 					mensaje += "Ocurrió un error desconocido.";
 				}
-				
+
 				setErrorDialog({
 					isOpen: true,
-					message: mensaje
+					message: mensaje,
 				});
 				setIsRecording(false);
 			});
@@ -143,7 +152,7 @@ export default function RecordingPage() {
 		} catch (error) {
 			setErrorDialog({
 				isOpen: true,
-				message: "Error al transcribir el audio. Por favor, inténtalo de nuevo."
+				message: "Error al transcribir el audio. Por favor, inténtalo de nuevo.",
 			});
 			return null;
 		}
@@ -179,18 +188,16 @@ export default function RecordingPage() {
 	};
 
 	return (
-		<div className="p-6">
+		<div className="p-3">
 			{" "}
-			{/* Contenedor principal con padding */}
-			<h1 className="text-2xl font-bold mb-4">Grabación de Tutoría</h1>{" "}
-			{/* Título principal */}
-			<p className="mb-4">Presiona el botón para grabar tu reunión.</p>{" "}
+			{/* Aumentamos el padding bottom para dejar espacio al botón */}
+			<h1 className="text-8xl font-bold mb-4">Sesión de Tutoría</h1>{" "}
 			{/* Descripción */}
 			<div className="mb-4 flex items-center">
 				{" "}
 				{/* Contenedor del switch */}
-				<label htmlFor="record-toggle" className="mr-2">
-					¿Grabar audio?
+				<label htmlFor="record-toggle" className="mr-2 text-sm ">
+					¿Habilitar audio?
 				</label>
 				<Switch
 					id="record-toggle"
@@ -198,12 +205,6 @@ export default function RecordingPage() {
 					onCheckedChange={(value) => setShouldRecord(value)}
 				/>
 			</div>
-			<Button onClick={isRecording ? stopRecording : startRecording}>
-				{" "}
-				{/* Botón para iniciar o detener la grabación */}
-				{isRecording ? "Detener Grabación" : "Iniciar Grabación"}{" "}
-				{/* Texto dinámico del botón */}
-			</Button>
 			<div className="mt-4">
 				{" "}
 				{/* Contenedor del visor de nivel de audio */}
@@ -220,48 +221,114 @@ export default function RecordingPage() {
 			</div>
 			{audioURLs.length > 0 && (
 				<div className="mt-4">
-					{" "}
-					{/* Contenedor de la lista de audios guardados */}
-					<h2 className="text-xl font-semibold">Audios Guardados</h2>{" "}
-					{/* Subtítulo */}
-					<ul>
+					<h2 className="text-2xl font-semibold mb-4">Audios Guardados</h2>
+					<div className="grid gap-4">
 						{audioURLs.map((audio, index) => (
-							<li key={index} className="mt-2">
-								<p className="text-sm">{audio.name}</p>{" "}
-								{/* Muestra el nombre del audio */}
-								<audio controls src={audio.url}></audio>{" "}
-								{/* Reproductor de audio para cada URL */}
-								<p className="text-sm mt-2">
-									Transcripción: {audio.transcription || "Transcripción no disponible"}
-								</p>{" "}
-								{/* Muestra la transcripción del audio */}
-							</li>
+							<Card key={index}>
+								<CardHeader>
+									<CardTitle className="text-lg">Grabación del {audio.name}</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="bg-slate-50 p-4 rounded-md">
+										<audio controls src={audio.url} className="w-full" />
+									</div>
+									<div className="space-y-2">
+										<h4 className="font-medium">Transcripción:</h4>
+										<p className="text-sm text-gray-600">
+											{audio.transcription || "Transcripción no disponible"}
+										</p>
+									</div>
+								</CardContent>
+							</Card>
 						))}
-					</ul>
-					<Button onClick={handleGenerateSummary} className="mt-4">
-						Generar Resumen de la Sesión
-					</Button>
+					</div>
+
 					{sessionSummary && (
-						<div className="mt-4 p-4 bg-gray-100 rounded">
-							<h3 className="text-lg font-semibold">Resumen de la Sesión</h3>
-							<p>{sessionSummary}</p>
-						</div>
+						<Card className="mt-4">
+							<CardHeader>
+								<CardTitle>Resumen de la Sesión</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<p>{sessionSummary}</p>
+							</CardContent>
+						</Card>
 					)}
 				</div>
-				)}
-			<AlertDialog open={errorDialog.isOpen} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, isOpen: open }))}>
+			)}
+			<AlertDialog
+				open={errorDialog.isOpen}
+				onOpenChange={(open) =>
+					setErrorDialog((prev) => ({ ...prev, isOpen: open }))
+				}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Error de Grabación</AlertDialogTitle>
-						<AlertDialogDescription>
-							{errorDialog.message}
-						</AlertDialogDescription>
+						<AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction>Aceptar</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
+			{/* Contenedor fijo para los botones */}
+			<div className="fixed bottom-4 right-4 flex gap-4">
+				<Button
+					onClick={isRecording ? stopRecording : startRecording}
+					className={`
+						w-15 h-15 rounded-full p-0 
+						flex items-center justify-center 
+						transition-all duration-200
+						shadow-lg hover:shadow-xl
+						${
+							isRecording
+								? "bg-red-500 hover:bg-red-600"
+								: "bg-green-500 hover:bg-green-600"
+						}
+						${!shouldRecord && "opacity-50 cursor-not-allowed"}
+					`}
+					disabled={!shouldRecord}
+					variant={isRecording ? "destructive" : "default"}
+				>
+					{isRecording ? (
+						<MicOff className="h-10 w-10 text-white" />
+					) : (
+						<Mic className="h-10 w-10 text-white" />
+					)}
+				</Button>
+
+				{audioURLs.length > 0 && (
+					<>
+						<Button
+							onClick={handleGenerateSummary}
+							className={`
+								w-15 h-15 rounded-full p-0 
+								flex items-center justify-center 
+								transition-all duration-200
+								shadow-lg hover:shadow-xl
+								bg-blue-500 hover:bg-blue-600
+							`}
+						>
+							<FileText className="h-10 w-10 text-white" />
+						</Button>
+
+						<Button
+							onClick={() => {
+								/* Aquí va la función para guardar */
+							}}
+							className={`
+								w-15 h-15 rounded-full p-0 
+								flex items-center justify-center 
+								transition-all duration-200
+								shadow-lg hover:shadow-xl
+								bg-purple-500 hover:bg-purple-600
+							`}
+						>
+							<Save className="h-10 w-10 text-white" />
+						</Button>
+					</>
+				)}
+			</div>
 		</div>
 	);
 }
