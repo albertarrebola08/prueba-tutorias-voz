@@ -279,7 +279,7 @@ export default function RecordingPage() {
 				</div>
 
 				{/* Contenedor del visor de nivel de audio */}
-				<div className="mt-4">
+				<div className="fixed bottom-0 left-0 right-0  m-0 bg-white shadow-md rounded-lg">
 					<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
 						<div
 							id="audio-level"
@@ -332,7 +332,7 @@ export default function RecordingPage() {
 									<CardContent className="space-y-1 p-3">
 										<div className="flex gap-2">
 											<textarea
-												className={`flex-1 text-xs p-1 rounded-md ${
+												className={`flex-1 text-xs p-1 px-2 rounded-md ${
 													!audio.transcription
 														? "border-red-500 border-2 placeholder:text-red-400"
 														: "border border-gray-200"
@@ -348,11 +348,25 @@ export default function RecordingPage() {
 							))}
 						</div>
 
+						{/*
+						 Nueva sección para todas las transcripciones */}
+						<h3 className="text-2xl mb-2">Transcripciones</h3>
+						<Card className="p-3">
+							<textarea
+								className="w-full min-h-[200px] text-sm "
+								value={audioURLs
+									.map(
+										(audio, index) =>
+											`${index + 1}. ${audio.transcription || "Sin transcripción"}`
+									)
+									.join("\n")}
+								readOnly
+							/>
+						</Card>
+						<h3 className="text-2xl mb-2">Resumen de la sesión</h3>
 						{sessionSummary && (
 							<Card className="mt-4">
-								<CardHeader>
-									<CardTitle>Resumen de la Sesión</CardTitle>
-								</CardHeader>
+								
 								<CardContent>
 									<p>{sessionSummary}</p>
 								</CardContent>
