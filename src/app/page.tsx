@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"; // Importa el componente Button
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
 import { generateSummary } from "@/lib/chatgptApi"; // Importa la función para generar resúmenes.
-import { Mic, MicOff, FileText, Save, Play, Square } from "lucide-react"; // Añadimos los iconos Play y Square
+import { Mic, MicOff, FileText, Save, Play, Square, Trash2 } from "lucide-react"; // Añadimos los iconos Play, Square y Trash2
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function RecordingPage() {
@@ -210,6 +210,12 @@ export default function RecordingPage() {
 		);
 	};
 
+	const handleDelete = (index: number) => {
+		if (window.confirm("¿Estás seguro de que quieres borrar esta grabación?")) {
+			setAudioURLs((prev) => prev.filter((_, i) => i !== index));
+		}
+	};
+
 	return (
 		// Contenedor principal con altura mínima y padding
 		<div className="min-h-screen p-4">
@@ -247,9 +253,6 @@ export default function RecordingPage() {
 								<Card key={index} className="overflow-hidden p-0 gap-0">
 									<CardHeader className="h-[2em] p-3">
 										<div className="flex items-center justify-between gap-1 p-0">
-											<CardTitle className="text-sm text-gray-500 min-w-[200px]">
-												{audio.name}
-											</CardTitle>
 											<div className="flex items-center gap-2">
 												{playingAudio === audio.url ? (
 													<Button
@@ -271,14 +274,29 @@ export default function RecordingPage() {
 													</Button>
 												)}
 											</div>
+											<CardTitle className="text-sm text-gray-500 min-w-[200px]">
+												{audio.name}
+											</CardTitle>
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => handleDelete(index)}
+												className="h-8 w-8 p-0"
+											>
+												<Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+											</Button>
 										</div>
 									</CardHeader>
 									<CardContent className="space-y-1 p-3">
 										<div className="flex gap-2">
-											
 											<textarea
-												className="flex-1 text-xs p-1 border rounded-md"
+												className={`flex-1 text-xs p-1 rounded-md ${
+													!audio.transcription
+														? "border-red-500 border-2 placeholder:text-red-400"
+														: "border border-gray-200"
+												}`}
 												value={audio.transcription || ""}
+												placeholder="Error en la transcripción"
 												onChange={(e) => handleTranscriptionChange(index, e.target.value)}
 												rows={3}
 											/>
