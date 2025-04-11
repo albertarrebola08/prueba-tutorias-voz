@@ -1,6 +1,15 @@
 "use client"; // Indica que este archivo es un componente cliente, necesario para usar hooks como useState.
 
-import { useState, useRef } from "react"; // Eliminé useEffect ya que no se utiliza.
+import { useState, useRef } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button"; // Importa el componente Button desde la biblioteca ShadCN.
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
@@ -13,6 +22,10 @@ export default function RecordingPage() {
 	>([]); // Definí el tipo como un array de objetos con url, name y transcription.
 	const [shouldRecord, setShouldRecord] = useState(true); // Estado para controlar si se debe grabar o no.
 	const [sessionSummary, setSessionSummary] = useState<string | null>(null); // Estado para almacenar el resumen de la sesión.
+	const [errorDialog, setErrorDialog] = useState({
+		isOpen: false,
+		message: ""
+	}); // Estado para controlar el diálogo de error.
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
 	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
 	const audioContextRef = useRef<AudioContext | null>(null); // Inicialicé como null y definí el tipo AudioContext.
@@ -21,80 +34,98 @@ export default function RecordingPage() {
 	const animationFrameRef = useRef<number | null>(null); // Inicialicé como null y definí el tipo number.
 
 	const startRecording = () => {
-		if (!shouldRecord) return; // No inicia la grabación si la opción está desactivada.
+		if (!shouldRecord) return;
 
-		navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-			const mediaRecorder = new MediaRecorder(stream); // Inicializa MediaRecorder con el flujo de audio.
-			mediaRecorderRef.current = mediaRecorder;
-			audioChunksRef.current = []; // Resetea los fragmentos de audio.
+		navigator.mediaDevices.getUserMedia({ audio: true })
+			.then((stream) => {
+				const mediaRecorder = new MediaRecorder(stream); // Inicializa MediaRecorder con el flujo de audio.
+				mediaRecorderRef.current = mediaRecorder;
+				audioChunksRef.current = []; // Resetea los fragmentos de audio.
 
-			const audioContext = new AudioContext(); // Usé AudioContext directamente.
-			const analyser = audioContext.createAnalyser(); // Crea un analizador de audio.
-			const source = audioContext.createMediaStreamSource(stream); // Conecta el micrófono al contexto de audio.
-			source.connect(analyser); // Conecta el analizador al flujo de audio.
+				const audioContext = new AudioContext(); // Usé AudioContext directamente.
+				const analyser = audioContext.createAnalyser(); // Crea un analizador de audio.
+				const source = audioContext.createMediaStreamSource(stream); // Conecta el micrófono al contexto de audio.
+				source.connect(analyser); // Conecta el analizador al flujo de audio.
 
-			analyser.fftSize = 256; // Configura el tamaño de la transformada rápida de Fourier.
-			const bufferLength = analyser.frequencyBinCount; // Obtiene el tamaño del buffer de frecuencias.
-			const dataArray = new Uint8Array(bufferLength); // Crea un array para almacenar los datos de frecuencia.
+				analyser.fftSize = 256; // Configura el tamaño de la transformada rápida de Fourier.
+				const bufferLength = analyser.frequencyBinCount; // Obtiene el tamaño del buffer de frecuencias.
+				const dataArray = new Uint8Array(bufferLength); // Crea un array para almacenar los datos de frecuencia.
 
-			audioContextRef.current = audioContext; // Guarda el contexto de audio en la referencia.
-			analyserRef.current = analyser; // Guarda el analizador en la referencia.
-			dataArrayRef.current = dataArray; // Guarda el array de datos en la referencia.
+				audioContextRef.current = audioContext; // Guarda el contexto de audio en la referencia.
+				analyserRef.current = analyser; // Guarda el analizador en la referencia.
+				dataArrayRef.current = dataArray; // Guarda el array de datos en la referencia.
 
-			const draw = () => {
-				analyser.getByteFrequencyData(dataArray); // Obtiene los datos de frecuencia del analizador.
-				const level = dataArray.reduce((a, b) => a + b, 0) / bufferLength; // Calcula el nivel promedio de audio.
-				const levelElement = document.getElementById("audio-level"); // Obtiene el elemento del visor de nivel de audio.
-				if (levelElement) {
-					levelElement.style.width = `${level}%`; // Actualiza el ancho del visor según el nivel de audio.
+				const draw = () => {
+					analyser.getByteFrequencyData(dataArray); // Obtiene los datos de frecuencia del analizador.
+					const level = dataArray.reduce((a, b) => a + b, 0) / bufferLength; // Calcula el nivel promedio de audio.
+					const levelElement = document.getElementById("audio-level"); // Obtiene el elemento del visor de nivel de audio.
+					if (levelElement) {
+						levelElement.style.width = `${level}%`; // Actualiza el ancho del visor según el nivel de audio.
+					}
+					animationFrameRef.current = requestAnimationFrame(draw); // Solicita la próxima animación.
+				};
+				draw(); // Inicia la animación.
+
+				mediaRecorder.ondataavailable = (event) => {
+					audioChunksRef.current.push(event.data); // Almacena cada fragmento de audio grabado.
+				};
+
+				mediaRecorder.onstop = () => {
+					const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+					const audioURL = URL.createObjectURL(audioBlob);
+
+					const now = new Date();
+					const timestamp = now
+						.toLocaleString("es-ES", {
+							year: "numeric",
+							month: "2-digit",
+							day: "2-digit",
+							hour: "2-digit",
+							minute: "2-digit",
+							second: "2-digit",
+						})
+						.replace(/[:/]/g, "-");
+
+					const saveAudio = window.confirm(
+						`¿Quieres guardar este audio con el nombre: ${timestamp}?`
+					);
+					if (saveAudio) {
+						const audioData = { url: audioURL, name: timestamp, transcription: null };
+						setAudioURLs((prev) => [...prev, audioData]);
+
+						handleTranscription(audioBlob).then((transcription) => {
+							setAudioURLs((prev) =>
+								prev.map((audio) =>
+									audio.url === audioURL ? { ...audio, transcription } : audio
+								)
+							);
+						});
+					}
+
+					audioContext.close();
+					cancelAnimationFrame(animationFrameRef.current);
+				};
+
+				mediaRecorder.start(); // Inicia la grabación.
+				setIsRecording(true); // Cambia el estado a "grabando".
+			})
+			.catch((error) => {
+				let mensaje = "Error al acceder al micrófono: ";
+				
+				if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+					mensaje += "No se encontró ningún micrófono conectado.";
+				} else if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+					mensaje += "Permiso denegado para acceder al micrófono.";
+				} else {
+					mensaje += "Ocurrió un error desconocido.";
 				}
-				animationFrameRef.current = requestAnimationFrame(draw); // Solicita la próxima animación.
-			};
-			draw(); // Inicia la animación.
-
-			mediaRecorder.ondataavailable = (event) => {
-				audioChunksRef.current.push(event.data); // Almacena cada fragmento de audio grabado.
-			};
-
-			mediaRecorder.onstop = () => {
-				const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-				const audioURL = URL.createObjectURL(audioBlob);
-
-				const now = new Date();
-				const timestamp = now
-					.toLocaleString("es-ES", {
-						year: "numeric",
-						month: "2-digit",
-						day: "2-digit",
-						hour: "2-digit",
-						minute: "2-digit",
-						second: "2-digit",
-					})
-					.replace(/[:/]/g, "-");
-
-				const saveAudio = window.confirm(
-					`¿Quieres guardar este audio con el nombre: ${timestamp}?`
-				);
-				if (saveAudio) {
-					const audioData = { url: audioURL, name: timestamp, transcription: null };
-					setAudioURLs((prev) => [...prev, audioData]);
-
-					handleTranscription(audioBlob).then((transcription) => {
-						setAudioURLs((prev) =>
-							prev.map((audio) =>
-								audio.url === audioURL ? { ...audio, transcription } : audio
-							)
-						);
-					});
-				}
-
-				audioContext.close();
-				cancelAnimationFrame(animationFrameRef.current);
-			};
-
-			mediaRecorder.start(); // Inicia la grabación.
-			setIsRecording(true); // Cambia el estado a "grabando".
-		});
+				
+				setErrorDialog({
+					isOpen: true,
+					message: mensaje
+				});
+				setIsRecording(false);
+			});
 	};
 
 	const stopRecording = () => {
@@ -110,8 +141,11 @@ export default function RecordingPage() {
 			const transcription = await transcribeAudio(audioFile); // Llama a la API de Whisper.
 			return transcription; // Devuelve la transcripción.
 		} catch (error) {
-			alert("Error al transcribir el audio. Por favor, inténtalo de nuevo.");
-			return null; // Devuelve null en caso de error.
+			setErrorDialog({
+				isOpen: true,
+				message: "Error al transcribir el audio. Por favor, inténtalo de nuevo."
+			});
+			return null;
 		}
 	};
 
@@ -214,7 +248,20 @@ export default function RecordingPage() {
 						</div>
 					)}
 				</div>
-			)}
+				)}
+			<AlertDialog open={errorDialog.isOpen} onOpenChange={(open) => setErrorDialog(prev => ({ ...prev, isOpen: open }))}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Error de Grabación</AlertDialogTitle>
+						<AlertDialogDescription>
+							{errorDialog.message}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction>Aceptar</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
