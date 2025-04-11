@@ -243,7 +243,12 @@ export default function RecordingPage() {
 				);
 			});
 		}
-		setSaveDialog({ isOpen: false, audioURL: "", timestamp: "", audioBlob: null });
+		setSaveDialog({
+			isOpen: false,
+			audioURL: "",
+			timestamp: "",
+			audioBlob: null,
+		});
 	};
 
 	const handleDeleteConfirm = () => {
@@ -298,7 +303,7 @@ export default function RecordingPage() {
 														onClick={() => handleStop(audio.url)}
 														className="h-8 w-8 p-0"
 													>
-														<Square className="h-4 w-4 text-red-500" />
+														<Square className="h-4 w-4 text-rose-500" />
 													</Button>
 												) : (
 													<Button
@@ -307,7 +312,7 @@ export default function RecordingPage() {
 														onClick={() => handlePlay(audio.url)}
 														className="h-8 w-8 p-0"
 													>
-														<Play className="h-4 w-4 text-green-500" />
+														<Play className="h-4 w-4 text-emerald-500" />
 													</Button>
 												)}
 											</div>
@@ -320,7 +325,7 @@ export default function RecordingPage() {
 												onClick={() => handleDelete(index)}
 												className="h-8 w-8 p-0"
 											>
-												<Trash2 className="h-4 w-4 text-red-500 hover:text-red-700" />
+												<Trash2 className="h-4 w-4 text-rose-500 hover:text-rose-700" />
 											</Button>
 										</div>
 									</CardHeader>
@@ -361,13 +366,19 @@ export default function RecordingPage() {
 			<div className="fixed bottom-8 right-8 flex gap-4">
 				<Button
 					onClick={isRecording ? stopRecording : startRecording}
-					className={`w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl ${
-						isRecording
-							? "bg-red-500 hover:bg-red-600"
-							: "bg-green-500 hover:bg-green-600"
-					} ${!shouldRecord && "opacity-50 cursor-not-allowed"}`}
+					className={`
+						w-15 h-15 rounded-full p-0 
+						flex items-center justify-center 
+						transition-all duration-200 
+						shadow-lg hover:shadow-xl 
+						${
+							isRecording
+								? "bg-red-500 hover:bg-red-600"
+								: "bg-emerald-500 hover:bg-emerald-600"
+						} 
+						${!shouldRecord && "opacity-50 cursor-not-allowed"}
+					`}
 					disabled={!shouldRecord}
-					variant={isRecording ? "destructive" : "default"}
 				>
 					{isRecording ? (
 						<MicOff className="h-10 w-10 text-white" />
@@ -380,7 +391,11 @@ export default function RecordingPage() {
 					<>
 						<Button
 							onClick={handleGenerateSummary}
-							className="w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl bg-blue-500 hover:bg-blue-600"
+							className="w-15 h-15 rounded-full p-0 
+								flex items-center justify-center 
+								transition-all duration-200 
+								shadow-lg hover:shadow-xl 
+								bg-indigo-500 hover:bg-indigo-600"
 						>
 							<FileText className="h-10 w-10 text-white" />
 						</Button>
@@ -389,7 +404,11 @@ export default function RecordingPage() {
 							onClick={() => {
 								/* Aquí va la función para guardar */
 							}}
-							className="w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl bg-purple-500 hover:bg-purple-600"
+							className="w-15 h-15 rounded-full p-0 
+								flex items-center justify-center 
+								transition-all duration-200 
+								shadow-lg hover:shadow-xl 
+								bg-amber-500 hover:bg-amber-600"
 						>
 							<Save className="h-10 w-10 text-white" />
 						</Button>
@@ -398,7 +417,10 @@ export default function RecordingPage() {
 			</div>
 
 			{/* Diálogo de guardar */}
-			<AlertDialog open={saveDialog.isOpen} onOpenChange={(isOpen) => setSaveDialog((prev) => ({ ...prev, isOpen }))}>
+			<AlertDialog
+				open={saveDialog.isOpen}
+				onOpenChange={(isOpen) => setSaveDialog((prev) => ({ ...prev, isOpen }))}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Guardar Grabación</AlertDialogTitle>
@@ -408,7 +430,16 @@ export default function RecordingPage() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogAction onClick={handleSaveConfirm}>Guardar</AlertDialogAction>
-						<AlertDialogAction onClick={() => setSaveDialog({ isOpen: false, audioURL: "", timestamp: "", audioBlob: null })}>
+						<AlertDialogAction
+							onClick={() =>
+								setSaveDialog({
+									isOpen: false,
+									audioURL: "",
+									timestamp: "",
+									audioBlob: null,
+								})
+							}
+						>
 							Cancelar
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -416,7 +447,10 @@ export default function RecordingPage() {
 			</AlertDialog>
 
 			{/* Diálogo de eliminar */}
-			<AlertDialog open={deleteDialog.isOpen} onOpenChange={(isOpen) => setDeleteDialog((prev) => ({ ...prev, isOpen }))}>
+			<AlertDialog
+				open={deleteDialog.isOpen}
+				onOpenChange={(isOpen) => setDeleteDialog((prev) => ({ ...prev, isOpen }))}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Eliminar Grabación</AlertDialogTitle>
@@ -425,8 +459,12 @@ export default function RecordingPage() {
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
-						<AlertDialogAction onClick={() => setDeleteDialog({ isOpen: false, index: -1 })}>
+						<AlertDialogAction onClick={handleDeleteConfirm}>
+							Eliminar
+						</AlertDialogAction>
+						<AlertDialogAction
+							onClick={() => setDeleteDialog({ isOpen: false, index: -1 })}
+						>
 							Cancelar
 						</AlertDialogAction>
 					</AlertDialogFooter>
@@ -434,7 +472,12 @@ export default function RecordingPage() {
 			</AlertDialog>
 
 			{/* Diálogo de error */}
-			<AlertDialog open={errorDialog.isOpen} onOpenChange={(open) => setErrorDialog((prev) => ({ ...prev, isOpen: open }))}>
+			<AlertDialog
+				open={errorDialog.isOpen}
+				onOpenChange={(open) =>
+					setErrorDialog((prev) => ({ ...prev, isOpen: open }))
+				}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Error</AlertDialogTitle>
