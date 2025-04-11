@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"; // Importa el componente Button
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
 import { generateSummary } from "@/lib/chatgptApi"; // Importa la función para generar resúmenes.
-import { Mic, MicOff, FileText, Save } from "lucide-react"; // Añadimos el icono Save
+import { Mic, MicOff, FileText, Save, Play, Square } from "lucide-react"; // Añadimos los iconos Play y Square
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function RecordingPage() {
@@ -28,6 +28,7 @@ export default function RecordingPage() {
 		isOpen: false,
 		message: "",
 	}); // Estado para controlar el diálogo de error.
+	const [playingAudio, setPlayingAudio] = useState<string | null>(null); // Estado para controlar qué audio se está reproduciendo.
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
 	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
 	const audioContextRef = useRef<AudioContext | null>(null); // Inicialicé como null y definí el tipo AudioContext.
@@ -187,106 +188,129 @@ export default function RecordingPage() {
 		}
 	};
 
+	const handlePlay = (audioUrl: string) => {
+		const audio = new Audio(audioUrl);
+		audio.play();
+		setPlayingAudio(audioUrl);
+		audio.onended = () => setPlayingAudio(null);
+	};
+
+	const handleStop = (audioUrl: string) => {
+		const audios = document.getElementsByTagName("audio");
+		for (const audio of audios) {
+			audio.pause();
+			audio.currentTime = 0;
+		}
+		setPlayingAudio(null);
+	};
+
+	const handleTranscriptionChange = (index: number, transcription: string) => {
+		setAudioURLs((prev) =>
+			prev.map((audio, i) => (i === index ? { ...audio, transcription } : audio))
+		);
+	};
+
 	return (
-		<div className="p-3">
-			{" "}
-			{/* Aumentamos el padding bottom para dejar espacio al botón */}
-			<h1 className="text-8xl font-bold mb-4">Sesión de Tutoría</h1>{" "}
-			{/* Descripción */}
-			<div className="mb-4 flex items-center">
-				{" "}
-				{/* Contenedor del switch */}
-				<label htmlFor="record-toggle" className="mr-2 text-sm ">
-					¿Habilitar audio?
-				</label>
-				<Switch
-					id="record-toggle"
-					checked={shouldRecord}
-					onCheckedChange={(value) => setShouldRecord(value)}
-				/>
-			</div>
-			<div className="mt-4">
-				{" "}
-				{/* Contenedor del visor de nivel de audio */}
-				<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-					{" "}
-					{/* Barra de fondo del visor */}
-					<div
-						id="audio-level"
-						className="h-full bg-green-500"
-						style={{ width: "0%" }}
-					></div>{" "}
-					{/* Barra dinámica que muestra el nivel de audio */}
+		// Contenedor principal con altura mínima y padding
+		<div className="min-h-screen p-4">
+			{/* Contenedor para el contenido principal */}
+			<div className="max-w-7xl mx-auto space-y-6">
+				<h1 className="text-2xl font-bold mb-4">Sesión de Tutoría</h1>
+
+				{/* Descripción */}
+				<div className="mb-4 flex items-center">
+					{/* Contenedor del switch */}
+					<label htmlFor="record-toggle" className="mr-2 text-sm">
+						¿Habilitar audio?
+					</label>
+					<Switch
+						id="record-toggle"
+						checked={shouldRecord}
+						onCheckedChange={(value) => setShouldRecord(value)}
+					/>
 				</div>
-			</div>
-			{audioURLs.length > 0 && (
+
+				{/* Contenedor del visor de nivel de audio */}
 				<div className="mt-4">
-					<h2 className="text-2xl font-semibold mb-4">Audios Guardados</h2>
-					<div className="grid gap-4">
-						{audioURLs.map((audio, index) => (
-							<Card key={index}>
+					<div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+						<div
+							id="audio-level"
+							className="h-full bg-green-500"
+							style={{ width: "0%" }}
+						></div>
+					</div>
+				</div>
+				{audioURLs.length > 0 && (
+					<div className="space-y-6">
+						<div className="grid gap-4">
+							{audioURLs.map((audio, index) => (
+								<Card key={index} className="overflow-hidden p-0 gap-0">
+									<CardHeader className="h-[2em] p-3">
+										<div className="flex items-center justify-between gap-1 p-0">
+											<CardTitle className="text-sm text-gray-500 min-w-[200px]">
+												{audio.name}
+											</CardTitle>
+											<div className="flex items-center gap-2">
+												{playingAudio === audio.url ? (
+													<Button
+														variant="ghost"
+														size="icon"
+														onClick={() => handleStop(audio.url)}
+														className="h-8 w-8 p-0"
+													>
+														<Square className="h-4 w-4 text-red-500" />
+													</Button>
+												) : (
+													<Button
+														variant="ghost"
+														size="icon"
+														onClick={() => handlePlay(audio.url)}
+														className="h-8 w-8 p-0"
+													>
+														<Play className="h-4 w-4 text-green-500" />
+													</Button>
+												)}
+											</div>
+										</div>
+									</CardHeader>
+									<CardContent className="space-y-1 p-3">
+										<div className="flex gap-2">
+											
+											<textarea
+												className="flex-1 text-xs p-1 border rounded-md"
+												value={audio.transcription || ""}
+												onChange={(e) => handleTranscriptionChange(index, e.target.value)}
+												rows={3}
+											/>
+										</div>
+									</CardContent>
+								</Card>
+							))}
+						</div>
+
+						{sessionSummary && (
+							<Card className="mt-4">
 								<CardHeader>
-									<CardTitle className="text-lg">Grabación del {audio.name}</CardTitle>
+									<CardTitle>Resumen de la Sesión</CardTitle>
 								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="bg-slate-50 p-4 rounded-md">
-										<audio controls src={audio.url} className="w-full" />
-									</div>
-									<div className="space-y-2">
-										<h4 className="font-medium">Transcripción:</h4>
-										<p className="text-sm text-gray-600">
-											{audio.transcription || "Transcripción no disponible"}
-										</p>
-									</div>
+								<CardContent>
+									<p>{sessionSummary}</p>
 								</CardContent>
 							</Card>
-						))}
+						)}
 					</div>
+				)}
+			</div>
 
-					{sessionSummary && (
-						<Card className="mt-4">
-							<CardHeader>
-								<CardTitle>Resumen de la Sesión</CardTitle>
-							</CardHeader>
-							<CardContent>
-								<p>{sessionSummary}</p>
-							</CardContent>
-						</Card>
-					)}
-				</div>
-			)}
-			<AlertDialog
-				open={errorDialog.isOpen}
-				onOpenChange={(open) =>
-					setErrorDialog((prev) => ({ ...prev, isOpen: open }))
-				}
-			>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Error de Grabación</AlertDialogTitle>
-						<AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogAction>Aceptar</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-			{/* Contenedor fijo para los botones */}
-			<div className="fixed bottom-4 right-4 flex gap-4">
+			{/* Botones flotantes */}
+			<div className="fixed bottom-8 right-8 flex gap-4">
 				<Button
 					onClick={isRecording ? stopRecording : startRecording}
-					className={`
-						w-15 h-15 rounded-full p-0 
-						flex items-center justify-center 
-						transition-all duration-200
-						shadow-lg hover:shadow-xl
-						${
-							isRecording
-								? "bg-red-500 hover:bg-red-600"
-								: "bg-green-500 hover:bg-green-600"
-						}
-						${!shouldRecord && "opacity-50 cursor-not-allowed"}
-					`}
+					className={`w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl ${
+						isRecording
+							? "bg-red-500 hover:bg-red-600"
+							: "bg-green-500 hover:bg-green-600"
+					} ${!shouldRecord && "opacity-50 cursor-not-allowed"}`}
 					disabled={!shouldRecord}
 					variant={isRecording ? "destructive" : "default"}
 				>
@@ -301,13 +325,7 @@ export default function RecordingPage() {
 					<>
 						<Button
 							onClick={handleGenerateSummary}
-							className={`
-								w-15 h-15 rounded-full p-0 
-								flex items-center justify-center 
-								transition-all duration-200
-								shadow-lg hover:shadow-xl
-								bg-blue-500 hover:bg-blue-600
-							`}
+							className="w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl bg-blue-500 hover:bg-blue-600"
 						>
 							<FileText className="h-10 w-10 text-white" />
 						</Button>
@@ -316,13 +334,7 @@ export default function RecordingPage() {
 							onClick={() => {
 								/* Aquí va la función para guardar */
 							}}
-							className={`
-								w-15 h-15 rounded-full p-0 
-								flex items-center justify-center 
-								transition-all duration-200
-								shadow-lg hover:shadow-xl
-								bg-purple-500 hover:bg-purple-600
-							`}
+							className="w-15 h-15 rounded-full p-0 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl bg-purple-500 hover:bg-purple-600"
 						>
 							<Save className="h-10 w-10 text-white" />
 						</Button>
