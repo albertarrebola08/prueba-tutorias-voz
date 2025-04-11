@@ -14,7 +14,15 @@ import { Button } from "@/components/ui/button"; // Importa el componente Button
 import { Switch } from "@/components/ui/switch"; // Importa el componente Switch desde la biblioteca ShadCN.
 import { transcribeAudio } from "@/lib/whisperApi"; // Importa la función para transcribir audios.
 import { generateSummary } from "@/lib/chatgptApi"; // Importa la función para generar resúmenes.
-import { Mic, MicOff, FileText, Save, Play, Square, Trash2 } from "lucide-react"; // Añadimos los iconos Play, Square y Trash2
+import {
+	Mic,
+	MicOff,
+	FileText,
+	Save,
+	Play,
+	Square,
+	Trash2,
+} from "lucide-react"; // Añadimos los iconos Play, Square y Trash2
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default function RecordingPage() {
@@ -29,6 +37,16 @@ export default function RecordingPage() {
 		message: "",
 	}); // Estado para controlar el diálogo de error.
 	const [playingAudio, setPlayingAudio] = useState<string | null>(null); // Estado para controlar qué audio se está reproduciendo.
+	const [saveDialog, setSaveDialog] = useState({
+		isOpen: false,
+		audioURL: "",
+		timestamp: "",
+		audioBlob: null as Blob | null,
+	}); // Estado para controlar el diálogo de guardar.
+	const [deleteDialog, setDeleteDialog] = useState({
+		isOpen: false,
+		index: -1,
+	}); // Estado para controlar el diálogo de eliminar.
 	const mediaRecorderRef = useRef<MediaRecorder | null>(null); // Inicialicé como null y definí el tipo MediaRecorder.
 	const audioChunksRef = useRef<Blob[]>([]); // Definí el tipo como un array de Blob.
 	const audioContextRef = useRef<AudioContext | null>(null); // Inicialicé como null y definí el tipo AudioContext.
@@ -90,21 +108,12 @@ export default function RecordingPage() {
 						})
 						.replace(/[:/]/g, "-");
 
-					const saveAudio = window.confirm(
-						`¿Quieres guardar este audio con el nombre: ${timestamp}?`
-					);
-					if (saveAudio) {
-						const audioData = { url: audioURL, name: timestamp, transcription: null };
-						setAudioURLs((prev) => [...prev, audioData]);
-
-						handleTranscription(audioBlob).then((transcription) => {
-							setAudioURLs((prev) =>
-								prev.map((audio) =>
-									audio.url === audioURL ? { ...audio, transcription } : audio
-								)
-							);
-						});
-					}
+					setSaveDialog({
+						isOpen: true,
+						audioURL,
+						timestamp,
+						audioBlob,
+					});
 
 					audioContext.close();
 					cancelAnimationFrame(animationFrameRef.current);
@@ -211,9 +220,37 @@ export default function RecordingPage() {
 	};
 
 	const handleDelete = (index: number) => {
-		if (window.confirm("¿Estás seguro de que quieres borrar esta grabación?")) {
-			setAudioURLs((prev) => prev.filter((_, i) => i !== index));
+		setDeleteDialog({
+			isOpen: true,
+			index,
+		});
+	};
+
+	const handleSaveConfirm = () => {
+		if (saveDialog.audioBlob && saveDialog.audioURL && saveDialog.timestamp) {
+			const audioData = {
+				url: saveDialog.audioURL,
+				name: saveDialog.timestamp,
+				transcription: null,
+			};
+			setAudioURLs((prev) => [...prev, audioData]);
+
+			handleTranscription(saveDialog.audioBlob).then((transcription) => {
+				setAudioURLs((prev) =>
+					prev.map((audio) =>
+						audio.url === saveDialog.audioURL ? { ...audio, transcription } : audio
+					)
+				);
+			});
 		}
+		setSaveDialog({ isOpen: false, audioURL: "", timestamp: "", audioBlob: null });
+	};
+
+	const handleDeleteConfirm = () => {
+		if (deleteDialog.index !== -1) {
+			setAudioURLs((prev) => prev.filter((_, i) => i !== deleteDialog.index));
+		}
+		setDeleteDialog({ isOpen: false, index: -1 });
 	};
 
 	return (
@@ -359,6 +396,55 @@ export default function RecordingPage() {
 					</>
 				)}
 			</div>
+
+			{/* Diálogo de guardar */}
+			<AlertDialog open={saveDialog.isOpen} onOpenChange={(isOpen) => setSaveDialog((prev) => ({ ...prev, isOpen }))}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Guardar Grabación</AlertDialogTitle>
+						<AlertDialogDescription>
+							¿Quieres guardar este audio con el nombre: {saveDialog.timestamp}?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={handleSaveConfirm}>Guardar</AlertDialogAction>
+						<AlertDialogAction onClick={() => setSaveDialog({ isOpen: false, audioURL: "", timestamp: "", audioBlob: null })}>
+							Cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Diálogo de eliminar */}
+			<AlertDialog open={deleteDialog.isOpen} onOpenChange={(isOpen) => setDeleteDialog((prev) => ({ ...prev, isOpen }))}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Eliminar Grabación</AlertDialogTitle>
+						<AlertDialogDescription>
+							¿Estás seguro de que quieres borrar esta grabación?
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+						<AlertDialogAction onClick={() => setDeleteDialog({ isOpen: false, index: -1 })}>
+							Cancelar
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			{/* Diálogo de error */}
+			<AlertDialog open={errorDialog.isOpen} onOpenChange={(open) => setErrorDialog((prev) => ({ ...prev, isOpen: open }))}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Error</AlertDialogTitle>
+						<AlertDialogDescription>{errorDialog.message}</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogAction>Aceptar</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
