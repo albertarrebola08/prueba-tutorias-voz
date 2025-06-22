@@ -8,10 +8,6 @@ export default function Home() {
   const [showApp, setShowApp] = useState(false);
 
   useEffect(() => {
-    // Solicitar permisos de notificación al cargar
-    if ("Notification" in window) {
-      Notification.requestPermission();
-    }
     setShowApp(true);
   }, []);
 
@@ -29,7 +25,7 @@ export default function Home() {
   return (
     <>
       <PWAInstall />
-      <EntrevistaDashboard onBack={() => {}} userEmail="tutor@fpllefia.com" />
+      <EntrevistaDashboard onBack={() => {}} />
     </>
   );
 }

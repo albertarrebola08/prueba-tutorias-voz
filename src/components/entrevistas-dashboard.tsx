@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,16 +16,11 @@ import { mockAlumnosCards } from "@/data/entrevistas-data";
 import type { AlumnoCard } from "@/types/entrevistas";
 import { AudioRecorder } from "./audio-recorder";
 
-// ✅ AÑADIR INTERFACE PARA LAS PROPS
 interface EntrevistaDashboardProps {
   onBack: () => void;
-  userEmail: string;
 }
 
-export function EntrevistaDashboard({
-  onBack,
-  userEmail,
-}: EntrevistaDashboardProps) {
+export function EntrevistaDashboard({ onBack }: EntrevistaDashboardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
   const [showRecorder, setShowRecorder] = useState(false);
@@ -39,7 +34,7 @@ export function EntrevistaDashboard({
   const currentX = useRef<number>(0);
   const isDragging = useRef<boolean>(false);
 
-  const alumnos = mockAlumnosCards; // En producción filtrar por tutor
+  const alumnos = mockAlumnosCards;
 
   const currentAlumno = alumnos[currentIndex];
 
@@ -106,7 +101,6 @@ export function EntrevistaDashboard({
         tipo={recordingType}
         onClose={handleRecorderClose}
         onSave={() => {
-          // Aquí se guardaría en la base de datos
           handleRecorderClose();
         }}
       />
@@ -134,7 +128,7 @@ export function EntrevistaDashboard({
               {currentIndex + 1} de {alumnos.length}
             </p>
           </div>
-          <div className="w-20" /> {/* Spacer */}
+          <div className="w-20" />
         </div>
       </div>
 
@@ -274,8 +268,8 @@ export function EntrevistaDashboard({
                     Última Entrevista
                   </h4>
                   <p className="font-opensans text-sm text-gray-600">
-                    "El alumno muestra buen progreso en las prácticas, pero
-                    necesita mejorar la comunicación con el equipo."
+                    &ldquo;El alumno muestra buen progreso en las prácticas,
+                    pero necesita mejorar la comunicación con el equipo.&rdquo;
                   </p>
                 </div>
 
@@ -284,8 +278,8 @@ export function EntrevistaDashboard({
                     Última Observación
                   </h4>
                   <p className="font-opensans text-sm text-gray-600">
-                    "Participación activa en clase. Muestra interés por aprender
-                    nuevas tecnologías."
+                    &ldquo;Participación activa en clase. Muestra interés por
+                    aprender nuevas tecnologías.&rdquo;
                   </p>
                 </div>
               </div>
@@ -312,3 +306,6 @@ export function EntrevistaDashboard({
     </div>
   );
 }
+
+// Exportación por defecto también
+export default EntrevistaDashboard;
