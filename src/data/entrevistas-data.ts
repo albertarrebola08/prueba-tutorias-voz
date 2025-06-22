@@ -7,7 +7,8 @@ export const mockAlumnosCards: AlumnoCard[] = [
     apellidos: "González Pérez",
     edad: 19,
     grupo: "DAW 2º",
-    avatar: "/placeholder.svg?height=400&width=400",
+    avatar:
+      "https://img.freepik.com/free-photo/close-up-smiling-boy-with-sportswear-dawn_23-2147562116.jpg?semt=ais_hybrid&w=740",
     ultimaEntrevista: new Date("2024-01-15"),
     ultimaObservacion: new Date("2024-01-10"),
     totalEntrevistas: 3,
@@ -19,7 +20,8 @@ export const mockAlumnosCards: AlumnoCard[] = [
     apellidos: "Martín López",
     edad: 18,
     grupo: "DAW 2º",
-    avatar: "/placeholder.svg?height=400&width=400",
+    avatar:
+      "https://static.guiainfantil.com/media/25716/habitos-adolescencia-nino.jpg",
     ultimaEntrevista: new Date("2024-01-12"),
     ultimaObservacion: new Date("2024-01-08"),
     totalEntrevistas: 2,
@@ -31,7 +33,8 @@ export const mockAlumnosCards: AlumnoCard[] = [
     apellidos: "Rodríguez García",
     edad: 20,
     grupo: "DAW 2º",
-    avatar: "/placeholder.svg?height=400&width=400",
+    avatar:
+      "https://img.freepik.com/free-photo/beautiful-charming-girl-wears-pink-hoodie-visor-cap-back_176532-7775.jpg?semt=ais_hybrid&w=740",
     ultimaEntrevista: new Date("2024-01-14"),
     ultimaObservacion: new Date("2024-01-11"),
     totalEntrevistas: 4,
