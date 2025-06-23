@@ -232,7 +232,7 @@ export function AudioRecorder({
                   </div>
                   {/* Visualización de audio */}
                   <div className="flex gap-1 items-end h-12">
-                    {[...Array(15)].map((_, i) => (
+                    {Array.from({ length: 15 }, (_, i) => (
                       <div
                         key={i}
                         className="w-2 bg-green-500 rounded-full animate-pulse"
