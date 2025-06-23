@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
   Mic,
@@ -17,9 +16,9 @@ import {
   Save,
   Loader2,
 } from "lucide-react";
+import type { AlumnoCard, AudioRecording } from "@/types/entrevistas";
 import { transcribeAudio } from "@/lib/whisperApi";
 import { generateSummary } from "@/lib/chatgptApi";
-import type { AlumnoCard, AudioRecording } from "@/types/entrevistas";
 
 interface AudioRecorderProps {
   alumno: AlumnoCard;
@@ -39,13 +38,11 @@ export function AudioRecorder({
   const [transcriptions, setTranscriptions] = useState<string[]>([]);
   const [summary, setSummary] = useState("");
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // Actualizar tiempo cada segundo
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -54,8 +51,6 @@ export function AudioRecorder({
   }, []);
 
   const startRecording = async () => {
-    if (!audioEnabled) return;
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -72,12 +67,13 @@ export function AudioRecorder({
         });
         const audioUrl = URL.createObjectURL(audioBlob);
 
-        // Transcribir audio
-        let transcription = "Transcripción automática pendiente...";
+        // Transcribir automáticamente
+        const audioFile = new File([audioBlob], "audio.wav", {
+          type: "audio/wav",
+        });
+        let transcription = "Transcribiendo...";
+
         try {
-          const audioFile = new File([audioBlob], "audio.wav", {
-            type: "audio/wav",
-          });
           transcription = await transcribeAudio(audioFile);
         } catch {
           transcription = "Error en la transcripción";
@@ -88,13 +84,12 @@ export function AudioRecorder({
           url: audioUrl,
           duration: 0,
           timestamp: new Date(),
-          transcription: transcription,
+          transcription,
         };
 
         setRecordings((prev) => [...prev, newRecording]);
         setTranscriptions((prev) => [...prev, transcription]);
 
-        // Detener el stream
         stream.getTracks().forEach((track) => track.stop());
       };
 
@@ -122,20 +117,17 @@ export function AudioRecorder({
 
   const handleGenerateSummary = async () => {
     setIsGeneratingSummary(true);
-
     try {
-      const allTranscriptions = transcriptions.join("\n");
-      const generatedSummary = await generateSummary([allTranscriptions]);
-      setSummary(generatedSummary);
+      const summaryText = await generateSummary(transcriptions);
+      setSummary(summaryText);
     } catch {
-      setSummary("Error al generar el resumen. Por favor, inténtalo de nuevo.");
+      setSummary("Error al generar el resumen");
     } finally {
       setIsGeneratingSummary(false);
     }
   };
 
   const handleSave = () => {
-    // Aquí se guardaría en la base de datos
     console.log("Guardando:", {
       alumno: alumno.id,
       tipo,
@@ -149,47 +141,54 @@ export function AudioRecorder({
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white shadow-sm p-4">
-        <div className="flex items-center justify-between mb-4">
-          <Button variant="ghost" onClick={onClose} className="text-gray-600">
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            <span className="font-opensans">Volver</span>
+      {/* Header mejorado */}
+      <div className="bg-white shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="text-gray-600 p-2"
+          >
+            <ArrowLeft className="h-6 w-6 mr-2" />
+            <span className="font-opensans text-lg">Volver</span>
           </Button>
           <div className="text-center">
-            <h1 className="font-raleway font-semibold text-lg text-gray-900">
-              Sesión de {tipo === "entrevista" ? "Entrevista" : "Observación"}
+            <h1 className="font-raleway font-semibold text-2xl text-gray-900">
+              {tipo === "entrevista" ? "Entrevista" : "Observación"}
             </h1>
-            <p className="font-opensans text-sm text-gray-600">
+            <p className="font-opensans text-base text-gray-600">
               {currentTime.toLocaleString("es-ES")}
             </p>
           </div>
           <div className="w-20" />
         </div>
 
-        {/* Student Info */}
-        <div className="flex items-center gap-3 mb-4">
-          <Avatar className="h-12 w-12">
+        {/* Info del estudiante mejorada */}
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16">
             <AvatarImage
               src={alumno.avatar || "/placeholder.svg"}
               alt={alumno.nombre}
             />
-            <AvatarFallback className="bg-blue-500 text-white font-opensans">
+            <AvatarFallback className="bg-blue-500 text-white font-opensans text-xl">
               {alumno.nombre[0]}
               {alumno.apellidos[0]}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h2 className="font-raleway font-medium text-gray-900">
+            <h2 className="font-raleway font-semibold text-xl text-gray-900">
               {alumno.nombre} {alumno.apellidos}
             </h2>
-            <div className="flex gap-2">
-              <Badge variant="outline" className="font-opensans text-xs">
+            <div className="flex gap-3 mt-2">
+              <Badge
+                variant="outline"
+                className="font-opensans text-sm px-3 py-1"
+              >
                 {alumno.grupo}
               </Badge>
               <Badge
                 variant="outline"
-                className={`font-opensans text-xs ${
+                className={`font-opensans text-sm px-3 py-1 ${
                   tipo === "entrevista"
                     ? "border-green-500 text-green-600"
                     : "border-blue-500 text-blue-600"
@@ -200,53 +199,45 @@ export function AudioRecorder({
             </div>
           </div>
         </div>
-
-        {/* Audio Toggle */}
-        <div className="flex items-center gap-3">
-          <span className="font-opensans text-sm text-gray-700">
-            ¿Habilitar audio?
-          </span>
-          <Switch checked={audioEnabled} onCheckedChange={setAudioEnabled} />
-        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-        {/* Recording Controls */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex justify-center">
+      {/* Contenido principal */}
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+        {/* Controles de grabación optimizados */}
+        {recordings.length === 0 ? (
+          // Primera grabación - Botón grande
+          <Card className="p-8">
+            <CardContent className="text-center">
+              <h3 className="font-raleway font-semibold text-xl mb-6 text-gray-900">
+                Iniciar {tipo === "entrevista" ? "Entrevista" : "Observación"}
+              </h3>
               {!isRecording ? (
                 <Button
                   onClick={startRecording}
-                  disabled={!audioEnabled}
-                  className="bg-green-500 hover:bg-green-600 text-white w-16 h-16 rounded-full"
+                  className="bg-green-500 hover:bg-green-600 text-white w-24 h-24 rounded-full shadow-lg"
                 >
-                  <Mic className="h-8 w-8" />
+                  <Mic className="h-12 w-12" />
                 </Button>
               ) : (
-                <div className="flex flex-col items-center gap-4">
+                <div className="flex flex-col items-center gap-6">
                   <Button
                     onClick={stopRecording}
-                    className="bg-red-500 hover:bg-red-600 text-white w-16 h-16 rounded-full"
+                    className="bg-red-500 hover:bg-red-600 text-white w-24 h-24 rounded-full shadow-lg"
                   >
-                    <MicOff className="h-8 w-8" />
+                    <MicOff className="h-12 w-12" />
                   </Button>
-
-                  {/* Recording Indicator */}
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                    <span className="font-opensans text-sm text-gray-600">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse" />
+                    <span className="font-opensans text-lg text-gray-600">
                       Grabando...
                     </span>
                   </div>
-
-                  {/* Audio Visualization */}
-                  <div className="flex gap-1 items-end h-8">
-                    {[...Array(20)].map((_, i) => (
+                  {/* Visualización de audio */}
+                  <div className="flex gap-1 items-end h-12">
+                    {[...Array(15)].map((_, i) => (
                       <div
                         key={i}
-                        className="w-1 bg-green-500 rounded-full animate-pulse"
+                        className="w-2 bg-green-500 rounded-full animate-pulse"
                         style={{
                           height: `${Math.random() * 100 + 20}%`,
                           animationDelay: `${i * 0.1}s`,
@@ -256,32 +247,71 @@ export function AudioRecorder({
                   </div>
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          // Botones compactos cuando ya hay grabaciones
+          <div className="flex gap-4">
+            <Button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`flex-1 py-4 text-lg font-semibold ${
+                isRecording
+                  ? "bg-red-500 hover:bg-red-600"
+                  : "bg-green-500 hover:bg-green-600"
+              } text-white rounded-xl`}
+            >
+              {isRecording ? (
+                <MicOff className="h-6 w-6 mr-2" />
+              ) : (
+                <Mic className="h-6 w-6 mr-2" />
+              )}
+              {isRecording ? "Detener" : "Grabar"}
+            </Button>
 
-        {/* Recordings List */}
+            {!isGeneratingSummary && !summary && (
+              <Button
+                onClick={handleGenerateSummary}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-4 text-lg font-semibold rounded-xl"
+              >
+                <FileText className="h-6 w-6 mr-2" />
+                Resumen
+              </Button>
+            )}
+
+            {summary && (
+              <Button
+                onClick={handleSave}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-4 text-lg font-semibold rounded-xl"
+              >
+                <Save className="h-6 w-6 mr-2" />
+                Guardar
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Lista de grabaciones */}
         {recordings.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-raleway text-lg">
-                Grabaciones
+              <CardTitle className="font-raleway text-xl">
+                Grabaciones ({recordings.length})
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {recordings.map((recording) => (
+            <CardContent className="space-y-4">
+              {recordings.map((recording, index) => (
                 <div
                   key={recording.id}
-                  className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                  className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
                 >
-                  <Button variant="ghost" size="sm">
-                    <Play className="h-4 w-4" />
+                  <Button variant="ghost" size="sm" className="mt-1">
+                    <Play className="h-5 w-5 text-green-600" />
                   </Button>
                   <div className="flex-1">
-                    <p className="font-opensans text-sm font-medium">
+                    <p className="font-opensans font-medium text-lg mb-2">
                       {recording.timestamp.toLocaleTimeString("es-ES")}
                     </p>
-                    <p className="font-opensans text-xs text-gray-600">
+                    <p className="font-opensans text-base text-gray-700 leading-relaxed">
                       {recording.transcription}
                     </p>
                   </div>
@@ -289,9 +319,9 @@ export function AudioRecorder({
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteRecording(recording.id)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 mt-1"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </div>
               ))}
@@ -299,63 +329,23 @@ export function AudioRecorder({
           </Card>
         )}
 
-        {/* Transcriptions */}
-        {transcriptions.length > 0 && (
+        {/* Generando resumen */}
+        {isGeneratingSummary && (
           <Card>
-            <CardHeader>
-              <CardTitle className="font-raleway text-lg">
-                Transcripciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {transcriptions.map((transcription, index) => (
-                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-opensans font-medium text-sm">
-                        {index + 1}.
-                      </span>
-                    </div>
-                    <p className="font-opensans text-sm text-gray-700">
-                      {transcription}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-500" />
+              <p className="font-opensans text-lg text-gray-600">
+                Generando resumen...
+              </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Generate Summary */}
-        {recordings.length > 0 && !summary && (
-          <Card>
-            <CardContent className="p-4 text-center">
-              <Button
-                onClick={handleGenerateSummary}
-                disabled={isGeneratingSummary}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-opensans"
-              >
-                {isGeneratingSummary ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generando resumen...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generar Resumen
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Summary */}
+        {/* Resumen */}
         {summary && (
           <Card>
             <CardHeader>
-              <CardTitle className="font-raleway text-lg">
+              <CardTitle className="font-raleway text-xl">
                 Resumen de la sesión
               </CardTitle>
             </CardHeader>
@@ -363,26 +353,13 @@ export function AudioRecorder({
               <Textarea
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
-                className="min-h-32 font-opensans"
+                className="min-h-40 text-base font-opensans leading-relaxed"
                 placeholder="Resumen de la sesión..."
               />
             </CardContent>
           </Card>
         )}
       </div>
-
-      {/* Save Button */}
-      {(recordings.length > 0 || summary) && (
-        <div className="p-4 bg-white border-t">
-          <Button
-            onClick={handleSave}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-opensans font-medium"
-          >
-            <Save className="h-5 w-5 mr-2" />
-            Guardar Sesión
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
