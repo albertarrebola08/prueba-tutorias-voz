@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { EntrevistaDashboard } from "@/components/entrevistas-dashboard";
+import EntrevistaDashboard from "@/components/entrevistas-dashboard";
 import { PWAInstall } from "@/components/pwa-install";
 
 export default function Home() {
