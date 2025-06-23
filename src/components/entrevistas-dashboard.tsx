@@ -83,7 +83,7 @@ export default function EntrevistaDashboard({
         className="flex h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide"
         style={{ scrollBehavior: "smooth" }}
       >
-        {alumnos.map((alumno, alumnoIndex) => (
+        {alumnos.map((alumno) => (
           <div
             key={alumno.id}
             className="min-w-full h-full snap-center relative flex flex-col"
@@ -202,8 +202,9 @@ export default function EntrevistaDashboard({
                           Última Entrevista
                         </h4>
                         <p className="font-opensans text-lg text-white/90 leading-relaxed">
-                          "El alumno muestra buen progreso en las prácticas,
-                          pero necesita mejorar la comunicación con el equipo."
+                          &ldquo;El alumno muestra buen progreso en las
+                          prácticas, pero necesita mejorar la comunicación con
+                          el equipo.&rdquo;
                         </p>
                       </div>
 
@@ -212,8 +213,8 @@ export default function EntrevistaDashboard({
                           Última Observación
                         </h4>
                         <p className="font-opensans text-lg text-white/90 leading-relaxed">
-                          "Participación activa en clase. Muestra interés por
-                          aprender nuevas tecnologías."
+                          &ldquo;Participación activa en clase. Muestra interés
+                          por aprender nuevas tecnologías.&rdquo;
                         </p>
                       </div>
                     </div>
