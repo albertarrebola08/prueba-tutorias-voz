@@ -108,11 +108,9 @@ export function AudioRecorder({
   };
 
   const deleteRecording = (id: string) => {
+    const recordingIndex = recordings.findIndex((r) => r.id === id);
     setRecordings((prev) => prev.filter((r) => r.id !== id));
-    setTranscriptions((prev) => {
-      const index = recordings.findIndex((r) => r.id === id);
-      return prev.filter((_, i) => i !== index);
-    });
+    setTranscriptions((prev) => prev.filter((_, i) => i !== recordingIndex));
   };
 
   const handleGenerateSummary = async () => {
