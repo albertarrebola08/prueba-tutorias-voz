@@ -299,7 +299,7 @@ export function AudioRecorder({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recordings.map((recording, index) => (
+              {recordings.map((recording) => (
                 <div
                   key={recording.id}
                   className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl"
